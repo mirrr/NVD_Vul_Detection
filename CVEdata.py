@@ -2,6 +2,7 @@ import requests
 import mysql.connector
 from mysql.connector import Error
 from datetime import *
+import re
 
 ____ = 0
 
@@ -87,27 +88,18 @@ def createOrUpdateTable(connection, data):
                             r':o:.*:windows:([0-9.]+):', cpe_uri)
                         print(version)
                         windows_versions.add(version)
-            """
-            # extract build numbers from builds?
-            builds = set()
-            for node in item.get('configurations', {}).get('nodes', []):
-                for cpe_match in node.get('cpeMatch', []):
-                    cpe_uri = cpe_match.get('criteria', '')
-                    if 'Microsoft:windows' in cpe_uri and 'build' in cpe_uri:
-                        builds.add(cpe_match.get('version', ''))
-            
-            for build_number in builds:"""
+
             for windows_version in windows_versions:
                 cursor.execute('''
-                        INSERT INTO cve_data
-                        (cve_id, description, base_score, evaluator_solution, windows_version)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        ON DUPLICATE KEY UPDATE
-                        description=VALUES(description),
-                        published_date=VALUES(published_date),
-                        last_modified_date=VALUES(last_modified_date),
-                        base_score=VALUES(base_score),
-                        evaluator_solution=VALUES(evaluator_solution)
+                    INSERT INTO cve_data
+                    (cve_id, description, base_score, evaluator_solution, windows_version)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                    description=VALUES(description),
+                    published_date=VALUES(published_date),
+                    last_modified_date=VALUES(last_modified_date),
+                    base_score=VALUES(base_score),
+                    evaluator_solution=VALUES(evaluator_solution)
                     ''', (cve_id, description, published_date, last_modified_date, base_score, evaluator_solution, windows_version))
         connection.commit()
         print("Data inserted into MariaDB table")
@@ -123,7 +115,7 @@ def getCVEsByWindowsVersion(connection, windows_version):
     try:
         cursor = connection.cursor(dictionary=True)
 
-        # Select relevant CVEs for the specified windows_version
+        # Select relevant CVEs for the specified build number
         cursor.execute(
             '''SELECT cve_id, base_score, evaluator_solution FROM cve_data WHERE windows_version = %s''', (windows_version,))
         # a list of dictionaries containing cve_ids
@@ -162,15 +154,15 @@ def displayTable(connection):
 
 
 def resolveVul(connection, cveID, windows_version):
-    # receives a cveID and windows_version to be resolved and removed from database
+    # receives a cveID and buildNumber to be resolved and removed from database
     '''
-    VUL can be removed from list once resolved from all impacted devices of that build.
+    VUL can be removed from list once resolved from all impacted devices of that version.
     Manually remove from list by removing via (cve_id, windows_version) primary key pair
     '''
-    # removing version from windows_version list
+    # removing build number from build_numbers list
     try:
         cursor = connection.cursor()
-        # for VUl in cve_data, if exists in (cveID, windows_version) then remove
+        # for VUl in cve_data, if exists in (cveID, build_number) then remove
         cursor.execute('''
                     DELETE FROM cve_data WHERE cve_id = %s AND windows_version = %s
                 ''', (cveID, windows_version))
