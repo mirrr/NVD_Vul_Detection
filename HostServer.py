@@ -1,5 +1,6 @@
 import psutil
 import socket
+import platform
 
 ____ = 0
 
@@ -17,25 +18,30 @@ def connectToRemoteServer(ip_address):
         return False
 
 
-def getBuildNumber(ip_address):
+def getWindowsVersion(ip_address):
     try:
-        # Use psutil to get system information from the remote server
-        system_info = psutil.win_service_get("OSPPSVC", ip_address=ip_address)
-        build_number = system_info["version_info"]["build"]
-        return build_number
+        # Establish a connection to the remote server
+        with socket.create_connection((remote_ip, 22), timeout=1) as sock:
+            # Check if the remote system is running Windows
+            if platform.system() == 'Windows':
+                # Retrieve the Windows version using psutil
+                windows_version = platform.win32_ver()[0]
+                return windows_version
+            else:
+                return "Remote system is not running Windows"
     except Exception as e:
-        return f"Error retrieving Windows build number: {str(e)}"
+        return f"Error: {str(e)}"
 
 
 if __name__ == "__main__":
     remote_ip = ____  # TODO: Replace with IP address of the remote server
 
     if connectToRemoteServer(remote_ip):
-        build_number = getBuildNumber(remote_ip)
+        windows_version = getWindowsVersion(remote_ip)
         # TODO: change – build numbers are not ints
-        if not build_number.__contains__("Error"):
-            print(f"Windows Build Number for {remote_ip}: {build_number}")
+        if not windows_version.__contains__("Error"):
+            print(f"Windows Version for {remote_ip}: {windows_version}")
         else:
-            print(build_number)
+            print(windows_version)
     else:
         print(f"Error connecting to the remote server at {remote_ip}")
