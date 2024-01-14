@@ -115,7 +115,7 @@ def getCVEsByWindowsVersion(connection, windows_version):
     try:
         cursor = connection.cursor(dictionary=True)
 
-        # Select relevant CVEs for the specified build number
+        # Select relevant CVEs for the specified version
         cursor.execute(
             '''SELECT cve_id, base_score, evaluator_solution FROM cve_data WHERE windows_version = %s''', (windows_version,))
         # a list of dictionaries containing cve_ids
@@ -154,15 +154,15 @@ def displayTable(connection):
 
 
 def resolveVul(connection, cveID, windows_version):
-    # receives a cveID and buildNumber to be resolved and removed from database
+    # receives a cveID and windows_version to be resolved and removed from database
     '''
     VUL can be removed from list once resolved from all impacted devices of that version.
     Manually remove from list by removing via (cve_id, windows_version) primary key pair
     '''
-    # removing build number from build_numbers list
+    # removing version from windows_version list
     try:
         cursor = connection.cursor()
-        # for VUl in cve_data, if exists in (cveID, build_number) then remove
+        # for VUl in cve_data, if exists in (cveID, windows_version) then remove
         cursor.execute('''
                     DELETE FROM cve_data WHERE cve_id = %s AND windows_version = %s
                 ''', (cveID, windows_version))
