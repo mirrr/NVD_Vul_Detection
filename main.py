@@ -28,11 +28,6 @@ def buildDB():
         if cve_data:
             createOrUpdateTable(connection, cve_data)
 
-    """ last_update, cve_data = fetchCVEdata(last_update, end_date)
-    if not cve_data:
-        print("No CVE data available.")
-        return None, None"""
-
     createOrUpdateTable(connection, cve_data)
 
     return connection, cve_data
@@ -52,8 +47,9 @@ def buildDB():
 def getCVEsbyIPaddress(db_connection, ip_address):
     try:
         if connectToRemoteServer(ip_address):
-            build_number = getBuildNumber(ip_address)
-            list_of_cves = getCVEsByBuildNumber(db_connection, build_number)
+            windows_version = getWindowsVersion(ip_address)
+            list_of_cves = getCVEsByWindowsVersion(
+                db_connection, windows_version)
             return list_of_cves
     except Error as e:
         print("unable to connect to remote server at %s", ip_address)
