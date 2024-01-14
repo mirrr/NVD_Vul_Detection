@@ -83,8 +83,10 @@ def createOrUpdateTable(connection, data):
                     cpe_uri = cpe_match.get('criteria', '')
                     if 'microsoft:windows' in cpe_uri:
                         # TODO: how to get window version number
-                        windows_versions.add(____)
-
+                        version = re.search(
+                            r':o:.*:windows:([0-9.]+):', cpe_uri)
+                        print(version)
+                        windows_versions.add(version)
             """
             # extract build numbers from builds?
             builds = set()
@@ -116,14 +118,14 @@ def createOrUpdateTable(connection, data):
             cursor.close()
 
 
-def getCVEsByBuildNumber(connection, build_number):
+def getCVEsByWindowsVersion(connection, windows_version):
     # returns "list_of_cves" if success or None if fail
     try:
         cursor = connection.cursor(dictionary=True)
 
-        # Select relevant CVEs for the specified build number
+        # Select relevant CVEs for the specified windows_version
         cursor.execute(
-            '''SELECT cve_id, base_score, evaluator_solution FROM cve_data WHERE build_number = %s''', (build_number,))
+            '''SELECT cve_id, base_score, evaluator_solution FROM cve_data WHERE windows_version = %s''', (windows_version,))
         # a list of dictionaries containing cve_ids
         dictionary_of_cves = cursor.fetchall()
 
@@ -159,22 +161,22 @@ def displayTable(connection):
 # Part 3: Update vul table
 
 
-def resolveVul(connection, cveID, build_number):
-    # receives a cveID and buildNumber to be resolved and removed from database
+def resolveVul(connection, cveID, windows_version):
+    # receives a cveID and windows_version to be resolved and removed from database
     '''
     VUL can be removed from list once resolved from all impacted devices of that build.
-    Manually remove from list by removing via (cve_id, build_number) primary key pair
+    Manually remove from list by removing via (cve_id, windows_version) primary key pair
     '''
-    # removing build number from build_numbers list
+    # removing version from windows_version list
     try:
         cursor = connection.cursor()
-        # for VUl in cve_data, if exists in (cveID, build_number) then remove
+        # for VUl in cve_data, if exists in (cveID, windows_version) then remove
         cursor.execute('''
-                    DELETE FROM cve_data WHERE cve_id = %s AND build_number = %s
-                ''', (cveID, build_number))
+                    DELETE FROM cve_data WHERE cve_id = %s AND windows_version = %s
+                ''', (cveID, windows_version))
         connection.commit()
-        print("vul with (cve_id, build_number) pair (%s,%s) has been removed from MariaDB table",
-              (cveID, build_number))
+        print("vul with (cve_id, windows_version) pair (%s,%s) has been removed from MariaDB table",
+              (cveID, windows_version))
     except Error as e:
         print(f"Error: {e}")
     finally:
